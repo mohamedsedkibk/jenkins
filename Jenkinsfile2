@@ -1,0 +1,56 @@
+pipeline {
+    agent any
+    options { timestamps() }
+    stages {
+        stage('Cloner le depot') {
+            steps {
+                git url: 'https://github.com/mohamedsedkibk/jenkins.git',
+                    branch: 'master',
+                    credentialsId: 'github-token'
+            }
+        }
+        stage('Etape 1 : Verifier que index.html existe') {
+            steps {
+                bat 'echo === Etape 1 : Verifier que index.html existe ==='
+                bat '''
+                    if not exist index.html (
+                        echo ERREUR : index.html introuvable
+                        exit /b 1
+                    )
+                    echo OK : index.html existe
+                '''
+            }
+        }
+        stage('Etape 2 : Verifier le debut du code HTML') {
+            steps {
+                bat 'echo === Etape 2 : Verifier que le fichier commence par DOCTYPE ==='
+                bat '''
+                    powershell -NoProfile -Command "$l = (Get-Content index.html -First 1).Trim(); if ($l -notmatch '^<!DOCTYPE html>') { Write-Host 'ERREUR : la premiere ligne n est pas <!DOCTYPE html>'; exit 1 } else { Write-Host 'OK : le fichier commence par <!DOCTYPE html>' }"
+                '''
+            }
+        }
+        stage('Etape 3 : Verifier la presence d un h1') {
+            steps {
+                bat 'echo === Etape 3 : Verifier la presence d une balise h1 ==='
+                bat '''
+                    findstr /i /c:"<h1" index.html >nul
+                    if errorlevel 1 (
+                        echo ERREUR : aucune balise h1 trouvee
+                        exit /b 1
+                    )
+                    echo OK : balise h1 trouvee
+                '''
+            }
+        }
+        stage('Etape 4 : Fin du build') {
+            steps {
+                bat 'echo === Etape 4 : Fin du build ==='
+                bat 'echo SUCCESS'
+            }
+        }
+    }
+    post {
+        success { echo 'Build OK : index.html est valide' }
+        failure { echo 'Build KO : index.html ne respecte pas les tests' }
+    }
+}
